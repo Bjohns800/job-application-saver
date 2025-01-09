@@ -10,7 +10,7 @@ A powerful tool to streamline your job application process by saving LinkedIn jo
 - **Organized Excel record**: Automatically updates an Excel file with job details, including company name, job title, and links.
 - **Duplicate Detection**: Prevents duplicate entries and allows user confirmation to avoid redundancy.
 - **Automatic Archiving**: Archives older job postings and updates records after 30 days.
-
+ 
 ---
 
 ## Download
