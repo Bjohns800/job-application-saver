@@ -1,1 +1,270 @@
+import tkinter as tk
+from tkinter import scrolledtext, messagebox
+import time
+import base64
+import os
+import re
+from datetime import datetime
+import openpyxl
+from openpyxl import Workbook
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
+from threading import Thread
+from shutil import move
+import sys
+
+def sanitize_filename(filename):
+    return re.sub(r'[\/:*?"<>|]', '', filename)
+
+def clean_linkedin_url(input_url):
+    """Cleans and validates a LinkedIn job URL."""
+    if "www.linkedin.com/jobs" not in input_url:
+        log_output("Error: The provided URL is not a valid LinkedIn job URL.")
+        return None
+    match = re.search(r'(\d{10})', input_url)
+    if match:
+        job_id = match.group(1)
+        cleaned_url = f"https://www.linkedin.com/jobs/view/{job_id}"
+        log_output(f"Cleaned URL: {cleaned_url}")
+        return cleaned_url
+    else:
+        log_output("Error: Could not find a valid 10-digit job ID in the URL.")
+        return None
+
+def check_duplicate(spreadsheet_path, company_name, job_title):
+    if not os.path.exists(spreadsheet_path):
+        return False
+    workbook = openpyxl.load_workbook(spreadsheet_path)
+    sheet = workbook.active
+    for row in sheet.iter_rows(min_row=2, values_only=True):
+        existing_company, existing_job = row[2], row[3]
+        if existing_company == company_name and existing_job == job_title:
+            return True
+    return False
+
+def get_save_directory():
+    """Get the directory where the script or executable is located."""
+    if getattr(sys, 'frozen', False):  # Running as a PyInstaller executable
+        return os.path.dirname(sys.executable)
+    else:  # Running as a standard Python script
+        return os.path.dirname(os.path.abspath(__file__))
+    
+def update_spreadsheet(date, time, company_name, job_title, file_path, url, username):
+    save_dir = get_save_directory()
+    spreadsheet_path = os.path.join(save_dir, "Job_Listings.xlsx")
+    if not os.path.exists(spreadsheet_path):
+        workbook = Workbook() 
+        sheet = workbook.active
+        sheet.append(["Date", "Time", "Company Name", "Job Title", "PDF Link", "LinkedIn URL", "Archived", "Location", "In Person", "Sector", "Status", "Notes"])
+        workbook.save(spreadsheet_path)
+    workbook = openpyxl.load_workbook(spreadsheet_path)
+    sheet = workbook.active
+    pdf_link = f'=HYPERLINK("{file_path}", "Open PDF")'
+    linkedin_link = f'=HYPERLINK("{url}", "View Job")'
+    sheet.append([date, time, company_name, job_title, pdf_link, linkedin_link])
+    workbook.save(spreadsheet_path)
+    log_output(f"Updated spreadsheet: {spreadsheet_path}")
+
+def save_webpage_as_pdf(url):
+    """Fetches a LinkedIn job posting and saves it as a PDF if not a duplicate or with user confirmation."""
+    options = webdriver.ChromeOptions()
+
+    # Dynamic Chrome profile path based on the operating system
+    if os.name == 'nt':  # Windows
+        username = os.environ.get("USERNAME")
+        chrome_profile_path = f"C:/Users/{username}/AppData/Local/Google/Chrome/User Data"
+    elif os.name == 'posix':  # macOS/Linux
+        username = os.environ.get("USER")
+        chrome_profile_path = f"/Users/{username}/Library/Application Support/Google/Chrome"
+    else:
+        log_output("Error: Unsupported operating system.")
+        return
+
+    options.add_argument(f"user-data-dir={chrome_profile_path}")
+    options.add_argument("profile-directory=Default")
+    options.add_argument('--disable-gpu')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+
+    # Save PDFs and Excel in the script's location
+    save_dir = get_save_directory()
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    driver.implicitly_wait(5)
+    try:
+        #log_output(f"Fetching the URL: {url}")
+        driver.get(url)
+
+        # Extract job title
+        job_title = "Unknown Job Title"
+        try:
+            job_title_element = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "h1.t-24.t-bold.inline"))
+            )
+            job_title = job_title_element.text.strip()
+            log_output(f"Job Title: {job_title}")
+        except Exception as e:
+            log_output("Failed to get job title:", e)
+
+        # Extract company name
+        company_name = "Unknown Company"
+        try:
+            time.sleep(2)
+            company_link = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div.job-details-jobs-unified-top-card__company-name a"))
+            )
+            company_link.click()
+            time.sleep(6)
+            company_name_element = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "h1.org-top-card-summary__title"))
+            )
+            company_name = company_name_element.text.strip()
+            log_output(f"Company Name: {company_name}")
+            driver.back()
+        except Exception as e:
+            log_output("Failed to extract company name from profile page:", e)
+
+        # Sanitize and check for duplicates
+        job_title = sanitize_filename(job_title)
+        company_name = sanitize_filename(company_name)
+        timestamp = datetime.now()
+        date_str = timestamp.strftime('%Y-%m-%d')
+        time_str = timestamp.strftime('%H-%M')
+        output_filename = f"{date_str} -- {company_name} -- {job_title}.pdf"
+        output_path = os.path.join(save_dir, output_filename)
+
+        # Check for duplicates
+        spreadsheet_path = os.path.join(save_dir, "Job_Listings.xlsx")
+        if check_duplicate(spreadsheet_path, company_name, job_title):
+            log_output(f"Duplicate entry detected for '{company_name} - {job_title}'.")
+            user_input = messagebox.askyesno(
+                "Duplicate Entry",
+                f"A duplicate entry for '{company_name} - {job_title}' already exists.\nDo you want to add it anyway?"
+            )
+            if not user_input:
+                log_output("Skipping PDF generation based on user input.")
+                return  # Exit early if user does not want to add it
+            else:
+                log_output("Proceeding with PDF generation despite duplicate entry.")
+
+        # Click 'See more' button if available
+        try:
+            see_more_button = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, "//button[contains(@aria-label, 'see more description')]"))
+            )
+            driver.execute_script("arguments[0].click();", see_more_button)
+        except Exception:
+            pass
+
+        # Save the page as PDF
+        settings = {"printBackground": True}
+        result = driver.execute_cdp_cmd("Page.printToPDF", settings)
+        pdf_data = base64.b64decode(result['data'])
+        with open(output_path, 'wb') as file:
+            file.write(pdf_data)
+
+        log_output(f"Saved webpage as {output_path}")
+        update_spreadsheet(date_str, time_str, company_name, job_title, output_path, url, username)
+
+    finally:
+        driver.quit()
+
+def archive():
+    """Archives PDF files older than one month and updates spreadsheet links."""
+    save_dir = get_save_directory()
+    Archive_dir = os.path.join(save_dir, "archive")
+    spreadsheet_path = os.path.join(save_dir, "Job_Listings.xlsx")
+    
+    if not os.path.exists(Archive_dir):
+        os.makedirs(Archive_dir)
+    
+    # Load the spreadsheet
+    if os.path.exists(spreadsheet_path):
+        workbook = openpyxl.load_workbook(spreadsheet_path)
+        sheet = workbook.active
+        
+        for row in sheet.iter_rows(min_row=2):  # Assuming the first row contains headers
+            pdf_cell = row[4]  # PDF Link column index (adjust if needed)
+            archived_cell = row[6]  # Archived column index (column G is 7th, adjust if needed)
+            
+            if pdf_cell.value and "HYPERLINK" in str(pdf_cell.value):
+                # Extract the file path from the HYPERLINK formula
+                match = re.search(r'"(.*?)"', str(pdf_cell.value))
+                if match:
+                    file_path = match.group(1)
+                    archived_path = os.path.join(Archive_dir, os.path.basename(file_path))
+                    if os.path.exists(file_path) and not os.path.exists(archived_path):  # Only move if not already archived
+                        file_mod_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+                        if (datetime.now() - file_mod_time).days > 30:
+                            # Move to archive folder
+                            move(file_path, archived_path)
+                            # Update the PDF link in the spreadsheet
+                            new_link = f'=HYPERLINK("{archived_path}", "Open PDF")'
+                            pdf_cell.value = new_link
+                            # Mark the "Archived" column
+                            archived_cell.value = "✓"  # You can change this to "Yes", "True", or another indicator
+                            # Log the file name moved
+                            log_output(f"Archived {os.path.basename(file_path)}")
+        workbook.save(spreadsheet_path)
+        log_output("Completed archiving.")
+    else:
+        log_output("Spreadsheet not found. Skipping archiving.")
+
+
+def log_output(message):
+    """Logs messages to the output text box."""
+    output_text.insert(tk.END, f"{message}\n")
+    output_text.see(tk.END)
+
+def run_scraping():
+    """Starts the scraping process with a loading animation."""
+    # TODO add functionality for other job sites
+    archive()
+    global loading_flag
+    loading_flag = True
+    # Disable the Go button
+    go_button.config(state=tk.DISABLED)
+    loading_label.config(text="Loading...")
+    try:
+        url = url_entry.get()
+        cleaned_url = clean_linkedin_url(url)
+        if cleaned_url:
+            save_webpage_as_pdf(cleaned_url)
+            log_output("Task completed successfully!")
+            log_output(" ")
+    except Exception as e:
+        log_output(f"Error: {str(e)}")
+    finally:
+        # Re-enable the Go button
+        go_button.config(state=tk.NORMAL)
+        loading_flag = False
+        loading_label.config(text="")
+
+# GUI Setup
+root = tk.Tk()
+root.title("LinkedIn Job Scraper")
+
+frame = tk.Frame(root)
+frame.pack(pady=10)
+
+tk.Label(frame, text="LinkedIn Job URL:").pack(side=tk.LEFT)
+url_entry = tk.Entry(frame, width=80)
+url_entry.pack(side=tk.LEFT, padx=5)
+
+go_button = tk.Button(frame, text="Go", command=lambda: Thread(target=run_scraping).start())
+go_button.pack(side=tk.LEFT)
+
+loading_label = tk.Label(root, text="", font=("Helvetica", 12))
+loading_label.pack(pady=5)
+
+output_text = tk.Text(root, wrap=tk.WORD, height=20, width=80)
+output_text.pack(pady=10)
+
+root.mainloop()
 
