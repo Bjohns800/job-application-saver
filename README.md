@@ -92,7 +92,7 @@ Below is an example of the application's user interface followed by an example e
 
 ---
 
-<img src="images/excel-output.PNG" alt="Excel Output Example" width="800">
+<img src="images/excel-output.PNG" alt="Excel Output Example" width="1000">
 
 ---
 
