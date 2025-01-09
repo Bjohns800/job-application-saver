@@ -61,8 +61,8 @@ you must have **Google Chrome** installed and logged into your personal linkedin
 1. Launch the application (either by running the `.exe` file or the Python script).
 2. Paste a LinkedIn job URL into the input field.
 3. Click **Go** to:
-  -Save the job posting as a PDF.
-  -Add its details to the Excel file.
+   - Save the job posting as a PDF.
+   - Add its details to the Excel file.
 4. Review your organized job records in the Excel sheet or open individual PDFs.
 
 ---
