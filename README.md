@@ -86,17 +86,11 @@ you must have **Google Chrome** installed and logged into your personal linkedin
 
 ### Screenshots
 
-### Screenshot: GUI
-
-Below is an example of the application's user interface:
+Below is an example of the application's user interface followed by an example excel output
 
 ![Job Application Saver GUI](images/gui-screenshot.PNG)
 
 ---
-
-### Screenshot: Excel Output
-
-The following is an example of the organized Excel output:
 
 ![Excel Output Example](images/excel-output.PNG)
 
