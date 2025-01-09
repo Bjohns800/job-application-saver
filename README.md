@@ -88,12 +88,11 @@ you must have **Google Chrome** installed and logged into your personal linkedin
 
 Below is an example of the application's user interface followed by an example excel output
 
-![Job Application Saver GUI](images/gui-screenshot.PNG)
+<img src="images/gui-screenshot.PNG" alt="Job Application Saver GUI" width="600">
 
 ---
 
-![Excel Output Example](images/excel-output.PNG)
-
+<img src="images/excel-output.PNG" alt="Excel Output Example" width="600">
 
 ---
 
