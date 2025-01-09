@@ -50,9 +50,9 @@ you must have **Google Chrome** installed and logged into your personal linkedin
 
 3. Run theApplication:
 
-  ```bash
-  python src/job_application_saver_app.py
-  ```
+   ```bash
+   python src/job_application_saver_app.py
+   ```
 
 ---
 
