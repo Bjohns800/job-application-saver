@@ -88,7 +88,7 @@ you must have **Google Chrome** installed and logged into your personal linkedin
 
 Below is an example of the application's user interface:
 
-![Job Application Saver GUI](docs/images/gui-screenshot.png)
+![Job Application Saver GUI](images/gui-screenshot.png)
 
 
 
