@@ -114,8 +114,9 @@ you must have **Google Chrome** installed and logged into your personal linkedin
    ```
 
 5. **Submit a pull request**:
-    -Go to the original repository and click on **New Pull Request**.
-    -Select your branch and submit the pull request to the `main` branch.
+   - Go to the original repository and click on **New Pull Request**.
+   - Select your branch and submit the pull request to the `main` branch.
+
 
 ---
 
