@@ -67,8 +67,9 @@ you must have **Google Chrome** installed and logged into your personal linkedin
 
 ---
 
-##Excel File Columns
-- **Date and Time**
+## Excel File Columns
+- **Date**
+- **Time**
 - **Company Name**
 - **Job Title**
 - **PDF Link** (hyperlink)
@@ -83,7 +84,7 @@ you must have **Google Chrome** installed and logged into your personal linkedin
 
 ---
 
-### Screenshot
+### Screenshots
 
 
 
@@ -108,9 +109,9 @@ you must have **Google Chrome** installed and logged into your personal linkedin
    ```
    
 4. **Push to your fork**:
-  ```bash
-  git push origin feature-branch
-  ```
+   ```bash
+   git push origin feature-branch
+   ```
 
 5. **Submit a pull request**:
    -Go to the original repository and click on **New Pull Request**.
