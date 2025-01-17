@@ -126,6 +126,7 @@ Below is an example of the application's user interface followed by an example e
 ## Future Plans
   - Support for additional job boards (e.g., Glassdoor, Indeed) and companies direct websites.
   - Fix of bug where time is added to spreadsheet in wrong format.
+  - Clear the input field upon completion
 
    
    
